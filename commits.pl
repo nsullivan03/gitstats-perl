@@ -25,6 +25,12 @@ sub findMaxKey {
 
 my %authors;
 
+# Handle when repository has no commits
+if (!(defined $ARGV[0])) {
+    printf("No commits to repository.\n");
+    exit;
+}
+
 my @author = $ARGV[0] =~ /Author:(.*)/g;
 
 # Stores authors in hash as keys with values equal to their commit totals
