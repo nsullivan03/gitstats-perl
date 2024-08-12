@@ -3,6 +3,11 @@ use Modern::Perl;
 use Cwd 'abs_path';
 # use Test::More;
 use Capture::Tiny ':all';
+use Date::Parse;
+
+#TODO
+# Average Commit Size (how to accomplish this?)
+# Programming Languages used/detected (use github-linguist)
 
 # Find the key with the highest value in a hash
 sub findMaxKey {
@@ -23,6 +28,30 @@ sub findMaxKey {
 
 }
 
+# Get the most recent date
+sub findFirstDate {
+    my ($firstut, $firstd);
+
+    my %hash = %{$_[0]};
+    foreach my $i (keys %hash)
+    {
+        my $itime = str2time($i);
+
+        if (!defined $firstut)
+        {
+            $firstut = $itime;
+            $firstd = $i;
+        }
+        elsif ($itime < $firstut)
+        {
+            $firstut = $itime;
+            $firstd = $i;
+        }
+    }
+
+    return $firstd;
+}
+
 my $basedir = abs_path();
 
 # Find all git projects on a system and store them in a buffer.
@@ -32,12 +61,17 @@ say "Number of git repos found: $#gitprojects";
 
 foreach (@gitprojects)
 {
+    # # Debug path for git project
+    # my $gitpath = "$_";
+    
     # Get absolute path of git repo and remove the git file from the path
     my $x = abs_path("$_");
     $x = substr ($x, 0, length($x) - 6);
 
     # Run disk usage command to get repository size
     system("bash", "-c", "du -shP \"$x\"");
+    #FIXME Adding die clause causes this line to always fail?
+    # system("bash", "-c", "du -shP \"$x\"") or die "Failed to calculate disk usage for $x";
     say "$x";
 
     chdir("$x") or die "Failed to change directory to $x!";
@@ -49,6 +83,7 @@ foreach (@gitprojects)
 
     # Get commits from raw output and put them into an array
     $/ = "";
+    #TODO See if there is a way to better implement this?
     my @commits = ($rawcommits =~ /commit.*\n.*\n.*\n(?!commit)/g);
     $/ = "\n";
     # foreach (@commits) {
@@ -58,11 +93,12 @@ foreach (@gitprojects)
     # print "$#commits";
 
 
-    my %authors;
+    my (%authors, %dates);
 
     
     foreach (@commits)
     {
+
         # Split commits into fields
         my @fields = split /\n/, $_;
 
@@ -96,38 +132,32 @@ foreach (@gitprojects)
                     }
                 }
             }
+
+            # match for Date field
+            elsif ($fields[$i] =~ /^Date:\s*(.*)$/g)
+            {
+                my $date = $^N;
+
+                if ($date)
+                {
+                    if (exists $dates{$date})
+                    {
+                        $dates{$date} += 1;
+                    }
+                    else {
+                        $dates{$date} = 0;
+                    }
+                }
+
+
+            }
             
 
         }
 
     }
-    
 
-    # # TODO Can I rewrite this so it doesnt use a C-style for loop?
-    # # Match for author field and place in new array variable
-    # my (@author, %authors);
-    # for (my $i = 0; $i < $#commits; $i++) {
-    #     # print "$commits[$i]";
-    #     $author[$i] = $commits[$i] =~ /Author:(.*)\n/g;
-    #     # print "$commits[$i]";
-    # }; 
-
-    # # Stores authors in hash as keys with values equal to their commit totals
-    # for my $i (@author)
-    # {
-    #     # print "$author[$i]";
-    #     if (exists $authors{$i})
-    #     {
-    #         $authors{$i} += 1;
-    #     }
-    #     else
-    #     {
-    #         $authors{$i} = 0;
-    #     }
-    # }
-    
-    # print ("Most frequent committers\n");
-
+    # print three users with the most commits to the repo
     for (my $i = 0; $i < 3; $i++)
     {
         my $maxauthor = findMaxKey(\%authors);
@@ -139,7 +169,19 @@ foreach (@gitprojects)
             delete $authors{$maxauthor};
         }
     
-    } 
+    }
+
+    # Print the date of the first commit
+    my $firstcommit = findFirstDate(\%dates);
+    printf("First commit date: %s\n", $firstcommit);
+
+    # Pass repository to ruby script for language analysis
+    chomp;
+    my @linguistcommand = ("ruby", "$basedir/langanalyst.rb", "$_");
+
+    #printf("%s and %s\n", $linguistcommand[1], $_);
+    system(@linguistcommand) != -1 or die "github-linguist failed: $?";
+
 }
 
 
