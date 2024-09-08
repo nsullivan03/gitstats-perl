@@ -1,13 +1,24 @@
 #!/usr/bin/env perl
 use Modern::Perl;
 use Cwd 'abs_path';
-# use Test::More;
+# use Test2::Suite;
+# use Regexp::Debugger;
 use Capture::Tiny ':all';
 use Date::Parse;
 
+
 #TODO
 # Average Commit Size (how to accomplish this?)
-# Programming Languages used/detected (use github-linguist)
+# Output to a file
+# Warning prompts (?)
+
+# Interrupt signal handler
+sub catch_int {
+    die ("Received Interrupt signal.");
+}
+
+# Catch interrupt signal (Ctrl-C)
+$SIG{INT} = \&catch_int;
 
 # Find the key with the highest value in a hash
 sub findMaxKey {
@@ -53,25 +64,65 @@ sub findFirstDate {
 }
 
 my $basedir = abs_path();
+my $path = "/home";
+my $langflag = 0;
+
+# Process command line arguments
+for (my $i = 0; $i <= $#ARGV; $i++)
+{
+    # say("$i, $ARGV[$i]");
+    if ($ARGV[$i] eq "-h" ) { 
+        say("gitstats - output information about all github repositories under a directory");
+        print("\n");
+        say("-h - prints this help message");
+        say("-f DIRECTORY - use filepath as directory to scan (default is /home)");
+        say("-l - use github-linguist to analyze programming languages used");
+        # say("-o DIRECTORY - output information to logfile at directory (default is current directory)");
+        exit; 
+    }; # help 
+    if ($ARGV[$i] eq "-f") { 
+        if ($i + 1 > $#ARGV)
+        {
+            die("No file path given for flag -f");
+        }
+        
+        $path = $ARGV[$i+1];
+
+        # Check for filepath correctness
+        opendir(my $dir, $path) or die("Invalid file path given for flag -f");
+        closedir($dir);
+        $i++;
+    }; # File path for analysis
+    if ($ARGV[$i] eq "-l") { $langflag = 1; }; # Language analysis
+    # if ($ARGV[$i] eq "-o") {
+    #     if ($i + 1 > $#ARGV)
+    #     {
+    #         die("No file path given for flag -o");
+    #     }
+
+    #     my $outpath = $ARGV[$i+1];
+    #     $/ = "/";
+    #     chomp($outpath);
+    #     $/ = "\n"
+    #     open(my $outlog, "<", "$outpath/)
+        
+    # }   
+}
 
 # Find all git projects on a system and store them in a buffer.
-my @gitprojects = `find /home -name .git -type d -prune`;
+my @gitprojects = `find $path -name .git -type d -prune`;
 
 say "Number of git repos found: $#gitprojects";
 
 foreach (@gitprojects)
 {
-    # # Debug path for git project
-    # my $gitpath = "$_";
     
     # Get absolute path of git repo and remove the git file from the path
     my $x = abs_path("$_");
     $x = substr ($x, 0, length($x) - 6);
 
     # Run disk usage command to get repository size
-    system("bash", "-c", "du -shP \"$x\"");
-    #FIXME Adding die clause causes this line to always fail?
-    # system("bash", "-c", "du -shP \"$x\"") or die "Failed to calculate disk usage for $x";
+    system("bash", "-c", "du -shP \"$x\"") == 0 or die "Failed to calculate disk usage for $x";
     say "$x";
 
     chdir("$x") or die "Failed to change directory to $x!";
@@ -83,9 +134,11 @@ foreach (@gitprojects)
 
     # Get commits from raw output and put them into an array
     $/ = "";
-    #TODO See if there is a way to better implement this?
-    my @commits = ($rawcommits =~ /commit.*\n.*\n.*\n(?!commit)/g);
+    #TODO Check this regexp for bugs
+    # my @commits = ($rawcommits =~ /commit.*\n.*\n.*\n(?!commit)/g);
+    my @commits = ($rawcommits =~ /(commit(.*\n(?!commit))+)/g);
     $/ = "\n";
+    
     # foreach (@commits) {
     #     print "$_";
     # };
@@ -161,7 +214,6 @@ foreach (@gitprojects)
     for (my $i = 0; $i < 3; $i++)
     {
         my $maxauthor = findMaxKey(\%authors);
-
         
         if ($maxauthor)
         {
@@ -175,13 +227,19 @@ foreach (@gitprojects)
     my $firstcommit = findFirstDate(\%dates);
     printf("First commit date: %s\n", $firstcommit);
 
-    # Pass repository to ruby script for language analysis
-    chomp;
-    my @linguistcommand = ("ruby", "$basedir/langanalyst.rb", "$_");
+    
+    if ($langflag)
+    {
+        # Pass repository to ruby script for language analysis
+        chomp;
+        my @linguistcommand = ("ruby", "$basedir/langanalyst.rb", "$_");
 
-    #printf("%s and %s\n", $linguistcommand[1], $_);
-    system(@linguistcommand) != -1 or die "github-linguist failed: $?";
+        #printf("%s and %s\n", $linguistcommand[1], $_);
+        system(@linguistcommand) == 0 or die "github-linguist failed: $?";
+    }
+    
 
+    printf("\n");
 }
 
 
