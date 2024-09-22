@@ -5,11 +5,12 @@ use Cwd 'abs_path';
 # use Regexp::Debugger;
 use Capture::Tiny ':all';
 use Date::Parse;
+use warnings;
+use strict;
 
 
 #TODO
 # Average Commit Size (how to accomplish this?)
-# Output to a file
 # Warning prompts (?)
 
 # Interrupt signal handler
@@ -67,6 +68,7 @@ my $basedir = abs_path();
 my $path = "/home";
 my $langflag = 0;
 
+
 # Process command line arguments
 for (my $i = 0; $i <= $#ARGV; $i++)
 {
@@ -77,7 +79,7 @@ for (my $i = 0; $i <= $#ARGV; $i++)
         say("-h - prints this help message");
         say("-f DIRECTORY - use filepath as directory to scan (default is /home)");
         say("-l - use github-linguist to analyze programming languages used");
-        # say("-o DIRECTORY - output information to logfile at directory (default is current directory)");
+        say("-o DIRECTORY - output information to logfile at directory (default is current directory)");
         exit; 
     }; # help 
     if ($ARGV[$i] eq "-f") { 
@@ -94,19 +96,31 @@ for (my $i = 0; $i <= $#ARGV; $i++)
         $i++;
     }; # File path for analysis
     if ($ARGV[$i] eq "-l") { $langflag = 1; }; # Language analysis
-    # if ($ARGV[$i] eq "-o") {
-    #     if ($i + 1 > $#ARGV)
-    #     {
-    #         die("No file path given for flag -o");
-    #     }
+    if ($ARGV[$i] eq "-o") {
+        # if no filepath is given, use base directory
+        my $outpath = "";
+        if ($i + 1 > $#ARGV || length($ARGV[$i+1]) == 2)
+        {
+            $outpath = "$basedir";
+        }
+        else
+        {
+            $outpath = $ARGV[$i+1];
+        }
 
-    #     my $outpath = $ARGV[$i+1];
-    #     $/ = "/";
-    #     chomp($outpath);
-    #     $/ = "\n"
-    #     open(my $outlog, "<", "$outpath/)
+        # Remove trailing slash and create timestamp
+        $/ = "/";
+        chomp($outpath);
+        $/ = "\n";
+        my @time = localtime(time);
+        my $timestamp = "$time[5]-$time[4]-$time[3]_$time[2]-$time[1]-$time[0]";
+
+        # Open filehandle and set it to default output. Print path so we know what directory was searched in the log.
+        open(my $outlog, ">", "$outpath/gitstats-$timestamp.output") or die("unable to open output file for -o");
+        select($outlog);
+        say "$path";
         
-    # }   
+    }   
 }
 
 # Find all git projects on a system and store them in a buffer.
