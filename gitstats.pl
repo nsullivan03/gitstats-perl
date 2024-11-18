@@ -94,7 +94,7 @@ for (my $i = 0; $i <= $#ARGV; $i++)
         opendir(my $dir, $path) or die("Invalid file path given for flag -f");
         closedir($dir);
         $i++;
-    }; # File path for analysis
+    };
     if ($ARGV[$i] eq "-l") { $langflag = 1; }; # Language analysis
     if ($ARGV[$i] eq "-o") {
         # if no filepath is given, use base directory
@@ -152,12 +152,6 @@ foreach (@gitprojects)
     # my @commits = ($rawcommits =~ /commit.*\n.*\n.*\n(?!commit)/g);
     my @commits = ($rawcommits =~ /(commit(.*\n(?!commit))+)/g);
     $/ = "\n";
-    
-    # foreach (@commits) {
-    #     print "$_";
-    # };
-    # print "$commits[0]";
-    # print "$#commits";
 
 
     my (%authors, %dates);
@@ -169,14 +163,6 @@ foreach (@gitprojects)
         # Split commits into fields
         my @fields = split /\n/, $_;
 
-        
-        # print "$#fields\n";
-        # print "$_";
-        # for (my $i = 0; $i < $#fields + 1; $i++)
-        # {
-        #     print "$i.) $fields[$i]\n";
-        # }
-
         for (my $i = 0; $i < $#fields + 1; $i++)
         {
             # match for author field
@@ -184,8 +170,6 @@ foreach (@gitprojects)
             {
                 # $^N matches the last captured parentheses 
                 my $authormatch = $^N;
-                # printf "\$^N: %s\n", $^N;
-                # print "$authormatch\n";
 
                 # add author to author count hash
                 if ($authormatch)
@@ -248,7 +232,6 @@ foreach (@gitprojects)
         chomp;
         my @linguistcommand = ("ruby", "$basedir/langanalyst.rb", "$_");
 
-        #printf("%s and %s\n", $linguistcommand[1], $_);
         system(@linguistcommand) == 0 or die "github-linguist failed: $?";
     }
     
