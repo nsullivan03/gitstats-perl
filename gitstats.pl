@@ -1,8 +1,7 @@
 #!/usr/bin/env perl
 use Modern::Perl;
 use Cwd 'abs_path';
-# use Test2::Suite;
-# use Regexp::Debugger;
+use Getopt::Std;
 use Capture::Tiny ':all';
 use Date::Parse;
 use warnings;
@@ -70,10 +69,12 @@ my $langflag = 0;
 
 
 # Process command line arguments
-for (my $i = 0; $i <= $#ARGV; $i++)
+my %opts;
+getopts('hf:lo:', \%opts);
+
+foreach (keys %opts)
 {
-    # say("$i, $ARGV[$i]");
-    if ($ARGV[$i] eq "-h" ) { 
+    if ($_ eq 'h') { 
         say("gitstats - output information about all github repositories under a directory");
         print("\n");
         say("-h - prints this help message");
@@ -81,31 +82,30 @@ for (my $i = 0; $i <= $#ARGV; $i++)
         say("-l - use github-linguist to analyze programming languages used");
         say("-o DIRECTORY - output information to logfile at directory (default is current directory)");
         exit; 
-    }; # help 
-    if ($ARGV[$i] eq "-f") { 
-        if ($i + 1 > $#ARGV)
+    }; # help
+    if ($_ eq 'f') { 
+        if (!defined $_)
         {
             die("No file path given for flag -f");
         }
         
-        $path = $ARGV[$i+1];
+        $path = $opts{$_};
 
         # Check for filepath correctness
         opendir(my $dir, $path) or die("Invalid file path given for flag -f");
         closedir($dir);
-        $i++;
     };
-    if ($ARGV[$i] eq "-l") { $langflag = 1; }; # Language analysis
-    if ($ARGV[$i] eq "-o") {
+    if ($_ eq 'l') { $langflag = 1; }; # Language analysis
+    if ($_ eq 'o') {
         # if no filepath is given, use base directory
         my $outpath = "";
-        if ($i + 1 > $#ARGV || length($ARGV[$i+1]) == 2)
+        if (!defined $_)
         {
             $outpath = "$basedir";
         }
         else
         {
-            $outpath = $ARGV[$i+1];
+            $outpath = $opts{$_};
         }
 
         # Remove trailing slash and create timestamp
