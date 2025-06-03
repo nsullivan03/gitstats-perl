@@ -6,11 +6,13 @@ use Capture::Tiny ':all';
 use Date::Parse;
 use warnings;
 use strict;
-
+use File::Find;
+# use App::find2perl;
 
 #TODO
 # Average Commit Size (how to accomplish this?)
 # Warning prompts (?)
+
 
 # Interrupt signal handler
 sub catch_int {
@@ -19,6 +21,7 @@ sub catch_int {
 
 # Catch interrupt signal (Ctrl-C)
 $SIG{INT} = \&catch_int;
+
 
 # Find the key with the highest value in a hash
 sub findMaxKey {
@@ -113,8 +116,8 @@ foreach (keys %opts)
         chomp($outpath);
         $/ = "\n";
         my @time = localtime(time);
-        my $timestamp = "$time[5]-$time[4]-$time[3]_$time[2]-$time[1]-$time[0]";
-
+        my $timestamp = "$time[5]-$time[4]-$time[3]_$time[2]-$time[1]-$time[0]"; # Shouldnt need to worry about file overwriting, as timestamp is to the second
+        
         # Open filehandle and set it to default output. Print path so we know what directory was searched in the log.
         open(my $outlog, ">", "$outpath/gitstats-$timestamp.output") or die("unable to open output file for -o");
         select($outlog);
@@ -126,7 +129,7 @@ foreach (keys %opts)
 # Find all git projects on a system and store them in a buffer.
 my @gitprojects = `find $path -name .git -type d -prune`;
 
-say "Number of git repos found: $#gitprojects";
+say "Number of git repos found: " . ($#gitprojects + 1) . "\n"; 
 
 foreach (@gitprojects)
 {
